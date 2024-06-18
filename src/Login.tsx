@@ -1,11 +1,57 @@
-import { VStack, Image, Text, Box, Link } from 'native-base'
+import { VStack, Image, Text, Box, Link, useToast } from 'native-base'
 import { TouchableOpacity } from 'react-native';
 import Logo from './assets/Logo.png'
 import { Botao } from './components/Botao';
 import { EntradaTexto } from './components/EntradaTexto';
 import { Titulo } from './components/Titulo';
+import { useEffect, useState } from 'react';
+import { fazerLogin } from './servicos/AutenticacaoServico';
 
-export default function Login({navigation}) {
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { jwtDecode } from 'jwt-decode';
+
+export default function Login({navigation} : any) {
+
+  const [email, setEmail] = useState('')
+  const [senha, setSenha] = useState('')
+
+  const toast = useToast()
+
+  useEffect(() => {
+    async function verificarLogin() {
+      const token = await AsyncStorage.getItem('token')
+
+      if(token){
+        navigation.replace('Tabs')
+      }
+    }
+    verificarLogin()
+  }, [])
+
+  async function login() {
+    const resultado = await fazerLogin(email, senha)
+
+    if(resultado){
+
+      const {token} = resultado
+
+      AsyncStorage.setItem('toke', token)
+      
+      const tokenDecoded =  jwtDecode(token) as any
+      const pacienteId = tokenDecoded.id
+
+      AsyncStorage.setItem('pacienteId', pacienteId)
+
+      navigation.replace('Tabs')
+    }
+    else{
+      toast.show({
+        title:"Erro no login",
+        description:"O email ou senha estão incorretos",
+        backgroundColor: "red.500"
+      })
+    }
+  }
   return (
     <VStack flex={1} alignItems="center" justifyContent="center" p={5}>
       <Image source={Logo} alt="Logo Voll" />
@@ -17,13 +63,18 @@ export default function Login({navigation}) {
         <EntradaTexto
           label="Email"
           placeholder="Insira seu endereço de e-mail"
+          value={email}
+          onChangeText={setEmail}
         />
         <EntradaTexto
           label="Senha"
           placeholder="Insira sua senha"
+          value={senha}
+          onChangeText={setSenha}
+          secureTextEntry
         />
       </Box>
-      <Botao onPress={()=> navigation.navigate('Tabs')}>Entrar</Botao>
+      <Botao onPress={login}>Entrar</Botao>
 
       <Link href='https://www.alura.com.br' mt={2}>
         Esqueceu sua senha?
